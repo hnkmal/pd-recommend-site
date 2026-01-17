@@ -12,6 +12,8 @@
             --accent-color: #ffccbc;
             --text-color: #4e342e;
             --card-bg: #ffffff;
+            --star-color: #f57c00; /* 星の色 */
+            --star-bg: #e0e0e0;    /* 星の背景色 */
         }
 
         body {
@@ -123,7 +125,32 @@
         .score-area {
             font-size: 20px;
             margin-bottom: 20px;
-            color: #f57c00;
+            color: var(--star-color);
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 星評価のための新しいCSS */
+        .star-rating {
+            position: relative;
+            display: inline-block;
+            font-size: 30px; /* 星の大きさ */
+            line-height: 1;
+        }
+        .star-rating-front {
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            width: 0%; /* JSで制御 */
+            color: var(--star-color);
+            white-space: nowrap;
+        }
+        .star-rating-back {
+            color: var(--star-bg);
         }
 
         .comment-box {
@@ -172,7 +199,14 @@
     <div id="result-screen" class="hidden fade-in">
         <div class="result-title">あなたにおすすめのペアリングは…</div>
         <div class="pairing-result" id="result-drink"></div>
-        <div class="score-area" id="result-score"></div>
+        
+        <div class="score-area">
+            <div id="score-text"></div>
+            <div class="star-rating">
+                <div class="star-rating-back">★★★★</div>
+                <div class="star-rating-front" id="star-fill">★★★★</div>
+            </div>
+        </div>
         
         <div class="comment-box">
             <p id="result-science-comment"></p>
@@ -187,14 +221,13 @@
     /* --- JavaScript: ロジック部分 --- */
 
     // 実験データに基づくスイーツごとの推奨飲み物リスト
-    // logic: "milk"=牛乳, "coffee"=コーヒー, "tea"=紅茶, "green_tea"=お茶, "juice"=ジュース
     const pairingsDB = {
         "donut": [
-            { id: "milk", name: "牛乳", score: 4.00, comment: "実験データで唯一の満点を記録。ドーナツの油分を牛乳が洗い流す、科学的に最強の組み合わせです。" },
-            { id: "coffee", name: "ブラックコーヒー", score: 3.89, comment: "甘みと苦味のバランスが絶妙。王道の組み合わせとして非常に高い評価を得ています。" },
+            { id: "milk", name: "牛乳", score: 4.00, comment: "実験データで満点の「4.0」を記録。ドーナツの油分を牛乳が洗い流す、科学的に最強の組み合わせです。" },
+            { id: "coffee", name: "ブラックコーヒー", score: 3.89, comment: "甘みと苦味のバランスが絶妙。3.89という極めて高い数値を叩き出しました。" },
             { id: "tea", name: "紅茶", score: 3.78, comment: "さっぱりと楽しみたいなら紅茶がおすすめ。ドーナツの重さを軽減してくれます。" }
         ],
-        "chou": [ // シュークリーム
+        "chou": [ 
             { id: "coffee", name: "コーヒー", score: 3.20, comment: "クリームの濃厚な甘さを、コーヒーの苦味が引き締めます。" },
             { id: "milk", name: "牛乳", score: 3.11, comment: "クリームと生地の両方に牛乳の成分が含まれるため、調和度は抜群です。" },
             { id: "tea", name: "紅茶", score: 3.10, comment: "香りの相性を楽しみたい方に。クリームの風味を邪魔しません。" }
@@ -214,23 +247,22 @@
             { id: "tea", name: "紅茶", score: 2.56, comment: "意外な組み合わせですが、あんこと紅茶の相性は実験でも悪くない結果が出ています。" },
             { id: "coffee", name: "コーヒー", score: 2.11, comment: "和モダンの楽しみ方。あんこの強さに負けないコーヒーを選ぶのがコツ。" }
         ],
-        "choco": [ // チョコ系（データがない場合はアンケートと類似スイーツから推測）
+        "choco": [ 
             { id: "coffee", name: "コーヒー", score: 3.50, comment: "アンケートで最も支持された組み合わせ。カカオの苦味とコーヒーの香りが共鳴します。" },
             { id: "milk", name: "牛乳", score: 3.30, comment: "濃厚なチョコをまろやかに中和したいなら牛乳一択です。" },
             { id: "tea", name: "紅茶", score: 3.00, comment: "少し酸味のあるチョコケーキなどは紅茶がよく合います。" }
         ],
-        "pudding": [ // プリン/ゼリー
+        "pudding": [ 
             { id: "coffee", name: "コーヒー", score: 3.10, comment: "カラメルの苦味とコーヒーは兄弟のような相性の良さです。" },
             { id: "tea", name: "紅茶", score: 3.00, comment: "つるっとした食感を邪魔しない、ストレートティーがおすすめ。" }
         ],
-        "cheese": [ // チーズケーキ
+        "cheese": [ 
             { id: "tea", name: "紅茶", score: 3.40, comment: "チーズの酸味と紅茶の渋みは、お互いを高め合う関係です。" },
             { id: "coffee", name: "コーヒー", score: 3.30, comment: "濃厚なチーズケーキには深煎りのコーヒーがよく合います。" }
         ]
     };
 
     // 質問リスト
-    // type: "filter"はユーザーの飲めるものを判定、"target"は最終的なスイーツ決定
     const questions = [
         {
             text: "Q1. コーヒーは飲めますか？",
@@ -273,7 +305,7 @@
         },
         {
             text: "Q5. 甘いものを食べる時、飲み物に求める役割は？",
-            type: "pref", // 味の好み（今回はシンプル化のためログのみ使用）
+            type: "pref",
             options: [
                 { text: "口の中をさっぱりさせたい", value: "refresh" },
                 { text: "甘さを引き立ててほしい", value: "enhance" }
@@ -348,9 +380,8 @@
         const q = questions[currentQuestionIndex];
         const container = document.getElementById("question-container");
         
-        // アニメーション用リセット
         container.classList.remove("fade-in");
-        void container.offsetWidth; // trigger reflow
+        void container.offsetWidth; 
         container.classList.add("fade-in");
 
         document.getElementById("question-text").innerText = q.text;
@@ -358,7 +389,6 @@
         const optionsDiv = document.getElementById("options-container");
         optionsDiv.innerHTML = "";
 
-        // 進捗バー更新
         const progress = ((currentQuestionIndex) / questions.length) * 100;
         document.getElementById("progress").style.width = `${progress}%`;
 
@@ -372,14 +402,12 @@
 
     // 回答処理
     function handleAnswer(question, value) {
-        // フィルター設定の保存
         if (question.type === "filter") {
             userPreferences[question.key] = value;
         }
-        // 最終スイーツの保存
         if (question.type === "target") {
             selectedSweet = value;
-            showResult(); // 最後の質問なので結果へ
+            showResult();
             return;
         }
 
@@ -387,7 +415,7 @@
         if (currentQuestionIndex < questions.length) {
             showQuestion();
         } else {
-            showResult(); // 万が一オーバーした場合
+            showResult();
         }
     }
 
@@ -396,22 +424,19 @@
         document.getElementById("quiz-screen").classList.add("hidden");
         document.getElementById("result-screen").classList.remove("hidden");
 
-        const candidates = pairingsDB[selectedSweet] || pairingsDB["donut"]; // デフォルト
+        const candidates = pairingsDB[selectedSweet] || pairingsDB["donut"]; 
         let bestMatch = null;
 
-        // 候補の中からユーザーが飲める一番スコアが高いものを探す
         for (let drink of candidates) {
             if (drink.id === "coffee" && !userPreferences.canCoffee) continue;
             if (drink.id === "milk" && !userPreferences.canMilk) continue;
             if (drink.id === "tea" && !userPreferences.canTea) continue;
             if (drink.id === "green_tea" && !userPreferences.canGreenTea) continue;
 
-            // ここまで来たら飲めるということ
             bestMatch = drink;
-            break; // スコア順に並んでいるので最初に見つかったものがベスト
+            break; 
         }
 
-        // 全滅した場合（全部飲めない人への救済）
         if (!bestMatch) {
             bestMatch = {
                 name: "お水 または 麦茶",
@@ -420,24 +445,28 @@
             };
         }
 
-        // DOMへの反映
         document.getElementById("result-drink").innerText = bestMatch.name;
         
-        // スコア表示（実験データがある場合のみ）
+        // --- 星評価の処理（パーセント計算） ---
+        const scoreTextEl = document.getElementById("score-text");
+        const starFillEl = document.getElementById("star-fill");
+        const starContainerEl = document.querySelector(".star-rating");
+
         if(bestMatch.score !== "-") {
-            // 星評価に変換（簡易的）
-            let stars = "★★★☆☆";
-            if (bestMatch.score >= 3.8) stars = "★★★★★";
-            else if (bestMatch.score >= 3.0) stars = "★★★★☆";
+            const score = parseFloat(bestMatch.score);
+            // 4点満点に対するパーセンテージを計算 (例: 3.5/4.0 = 87.5%)
+            const percent = (score / 4.0) * 100;
             
-            document.getElementById("result-score").innerText = `調和度スコア: ${bestMatch.score} ${stars}`;
+            scoreTextEl.innerText = `調和度: ${bestMatch.score} / 4.0`;
+            starFillEl.style.width = `${percent}%`; // 幅を変えることで星を塗る
+            starContainerEl.style.display = "inline-block"; // 星を表示
         } else {
-            document.getElementById("result-score").innerText = "";
+            scoreTextEl.innerText = "";
+            starContainerEl.style.display = "none"; // スコアがない場合は星を隠す
         }
+        // ------------------------------------
 
         document.getElementById("result-science-comment").innerHTML = `<strong>【分析結果】</strong><br>${bestMatch.comment}`;
-        
-        // アンケート結果の補足（ランダムまたは固定）
         document.getElementById("result-survey-comment").innerText = 
             "※アンケート参加者の多くが「後味のすっきり感」や「甘さのバランス」を重視しています。";
     }
